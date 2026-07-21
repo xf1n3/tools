@@ -128,10 +128,29 @@ position:absolute;top:3px;left:6px;font-size:10.5px;font-weight:600;color:var(�
 pointer-events:none;white-space:nowrap;
 }
 .tl-clip .tl-mini-wave{position:absolute;left:0;right:0;bottom:0;height:38px;pointer-events:none;}
+.tl-cursor-row{
+display:flex;align-items:baseline;gap:8px;margin-bottom:8px;
+}
+.tl-cursor-label{font-size:12px;color:var(–text-dim);}
+.tl-cursor-time{
+font-size:20px;font-weight:700;color:var(–accent);
+font-variant-numeric:tabular-nums;letter-spacing:.3px;
+}
 .tl-playhead{
 position:absolute;top:0;bottom:0;width:2px;background:#fff;
 box-shadow:0 0 6px #fff8;pointer-events:none;z-index:6;
 }
+.tl-cursor{
+position:absolute;top:0;bottom:0;width:2px;background:var(–accent);
+box-shadow:0 0 8px rgba(255,154,90,0.7);pointer-events:none;z-index:8;
+}
+.tl-cursor-handle{
+position:absolute;top:-2px;left:50%;margin-left:-9px;
+width:18px;height:18px;border-radius:50% 50% 50% 0;
+background:var(–accent);transform:rotate(-45deg);
+pointer-events:auto;touch-action:none;cursor:grab;
+}
+.tl-cursor-handle:active{cursor:grabbing;}
 
 .clip-row-list{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
 .clip-row{
@@ -236,10 +255,17 @@ a.dl-link{color:inherit;text-decoration:none;}
 
   <div class="panel" id="clipsPanel" style="display:none;">
     <p class="section-title">Таймлайн — тащи кусочки пальцем, между ними можно оставлять паузы</p>
+    <div class="tl-cursor-row">
+      <span class="tl-cursor-label">Курсор:</span>
+      <span class="tl-cursor-time" id="cursorTimeLabel">0:00.000</span>
+    </div>
     <div class="timeline-wrap" id="timelineWrap">
       <div class="timeline-inner" id="timelineInner">
         <div class="timeline-ruler" id="timelineRuler"></div>
         <div class="tl-playhead" id="tlPlayhead" style="display:none;"></div>
+        <div class="tl-cursor" id="tlCursor">
+          <div class="tl-cursor-handle"></div>
+        </div>
       </div>
     </div>
     <div class="zoom-row">
@@ -249,7 +275,8 @@ a.dl-link{color:inherit;text-decoration:none;}
     </div>
     <div class="clip-row-list" id="clipsList"></div>
     <div class="row" style="margin-top:12px;">
-      <button class="btn" id="playAllClipsBtn">▶ Играть всё по таймлайну</button>
+      <button class="btn primary" id="playFromCursorBtn">▶ Играть с курсора</button>
+      <button class="btn" id="playAllClipsBtn">▶ Играть всё сначала</button>
       <button class="btn danger" id="stopClipsBtn" style="display:none;">⏹ Стоп</button>
     </div>
     <div class="row" style="margin-top:8px;">
@@ -606,11 +633,124 @@ a.dl-link{color:inherit;text-decoration:none;}
   let tlDragStartX = 0;
   let tlDragStartTime = 0;
 
+  const tlCursor = document.getElementById('tlCursor');
+  const cursorTimeLabel = document.getElementById('cursorTimeLabel');
+  let cursorTime = 0;
+
   tlZoomRange.addEventListener('input', ()=>{
     pxPerSec = parseFloat(tlZoomRange.value);
     tlZoomVal.textContent = Math.round(pxPerSec)+'px/с';
     renderClipsList();
+    updateCursorPosition();
   });
+
+  function fmtTimeMs(t){
+    if(!isFinite(t)||t<0) t=0;
+    const m = Math.floor(t/60);
+    const s = Math.floor(t%60);
+    const ms = Math.round((t - Math.floor(t))*1000);
+    return m+':'+String(s).padStart(2,'0')+'.'+String(ms).padStart(3,'0');
+  }
+
+  function updateCursorPosition(){
+    tlCursor.style.left = (cursorTime*pxPerSec)+'px';
+    cursorTimeLabel.textContent = fmtTimeMs(cursorTime);
+  }
+
+  function setCursorTime(t, autoscroll){
+    cursorTime = Math.max(0, t);
+    updateCursorPosition();
+    if(autoscroll){
+      const wrapRect = timelineWrap.getBoundingClientRect();
+      const cursorX = cursorTime*pxPerSec;
+      const viewLeft = timelineWrap.scrollLeft;
+      const viewRight = viewLeft + wrapRect.width;
+      if(cursorX < viewLeft || cursorX > viewRight){
+        timelineWrap.scrollLeft = Math.max(0, cursorX - wrapRect.width/2);
+      }
+    }
+  }
+
+  // тап по дорожке (не на кусочке) ставит курсор
+  timelineWrap.addEventListener('pointerdown', e=>{
+    if(e.target.closest('.tl-clip') || e.target.closest('.tl-cursor-handle')) return;
+    const rect = timelineInner.getBoundingClientRect();
+    const x = e.clientX - rect.left + timelineWrap.scrollLeft;
+    setCursorTime(x / pxPerSec, false);
+  });
+
+  // перетаскивание за ручку курсора
+  let cursorDragging = false;
+  tlCursor.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    tlCursor.setPointerCapture(e.pointerId);
+    cursorDragging = true;
+  });
+  tlCursor.addEventListener('pointermove', e=>{
+    if(!cursorDragging) return;
+    const rect = timelineInner.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    setCursorTime(x / pxPerSec, true);
+  });
+  tlCursor.addEventListener('pointerup', ()=>{ cursorDragging = false; });
+  tlCursor.addEventListener('pointercancel', ()=>{ cursorDragging = false; });
+
+  function playFromCursor(){
+    if(clips.length===0) return;
+    stopPlayback();
+    stopClipPlayback();
+    sequenceStopRequested = false;
+    sequencePlaying = true;
+    document.getElementById('stopClipsBtn').style.display = 'inline-flex';
+    tlPlayhead.style.display = 'block';
+
+    const startAt = cursorTime;
+    const t0 = AC.currentTime + 0.05;
+    const activeSources = [];
+    clips.forEach(c=>{
+      const clipEnd = c.startTime + c.buffer.duration;
+      if(clipEnd <= startAt) return; // кусок полностью до курсора — пропускаем
+      const src = AC.createBufferSource();
+      src.buffer = c.buffer;
+      src.connect(AC.destination);
+      if(c.startTime >= startAt){
+        // кусок целиком после курсора — играем с начала, задержка = разница
+        src.start(t0 + (c.startTime - startAt));
+      } else {
+        // курсор попадает внутрь кусочка — начинаем играть с середины
+        const offsetInClip = startAt - c.startTime;
+        src.start(t0, offsetInClip);
+      }
+      activeSources.push(src);
+    });
+    if(activeSources.length===0){ stopClipPlayback(); return; }
+    playingSource = activeSources[activeSources.length-1];
+    const totalDur = timelineTotalDuration();
+
+    function anim(){
+      if(sequenceStopRequested){ return; }
+      const elapsed = startAt + (AC.currentTime - t0);
+      if(elapsed >= totalDur){
+        sequencePlaying = false;
+        currentPlayingClipIndex = -1;
+        document.getElementById('stopClipsBtn').style.display = 'none';
+        tlPlayhead.style.display = 'none';
+        renderClipsList();
+        return;
+      }
+      tlPlayhead.style.left = (elapsed*pxPerSec)+'px';
+      setCursorTime(elapsed, true);
+      const activeIdx = clips.findIndex(c=>elapsed>=c.startTime && elapsed<c.startTime+c.buffer.duration);
+      if(activeIdx !== currentPlayingClipIndex){
+        currentPlayingClipIndex = activeIdx;
+        renderClipsList();
+      }
+      requestAnimationFrame(anim);
+    }
+    requestAnimationFrame(anim);
+  }
+  document.getElementById('playFromCursorBtn').addEventListener('click', playFromCursor);
 
   function timelineTotalDuration(){
     if(clips.length===0) return 0;
@@ -643,6 +783,7 @@ a.dl-link{color:inherit;text-decoration:none;}
 
   function renderClipsList(){
     clipsPanel.style.display = clips.length ? 'block' : 'none';
+    updateCursorPosition();
     if(clips.length===0){
       timelineInner.style.width = '100%';
       timelineInner.querySelectorAll('.tl-clip').forEach(el=>el.remove());
