@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>Калькулятор урона — Пулестойкость</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    min-height: 100%;
+    background: #14161b;
+    color: #e9e6df;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+  }
+  body {
+    display: flex;
+    justify-content: center;
+    padding: 24px 14px 60px;
+  }
+  #app { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 18px; }
+
+  h1 {
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    color: #7ee083;
+    text-shadow: 0 0 8px rgba(126,224,131,0.35);
+    line-height: 1.5;
+  }
+  h1 span { display: block; color: #e8a33d; font-size: 11px; margin-top: 4px; letter-spacing: 1px; }
+
+  .card {
+    background: #1c1f26;
+    border: 2px solid #3a3f4a;
+    border-radius: 12px;
+    padding: 16px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .section-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #6b7078;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 8px; }
+  .field label { font-size: 12.5px; color: #9aa1ad; display: flex; justify-content: space-between; }
+  .field label b { color: #e9e6df; font-family: 'Courier New', monospace; }
+
+  input[type="number"], select {
+    background: #14161b; border: 2px solid #3a3f4a; color: #e9e6df;
+    font-family: 'Courier New', monospace; font-size: 16px; padding: 10px 10px;
+    border-radius: 8px; width: 100%;
+  }
+  select { appearance: none; }
+  input[type="number"]:focus, select:focus { outline: none; border-color: #7ee083; }
+
+  input[type="range"] { -webkit-appearance: none; width: 100%; height: 30px; background: transparent; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: #3a3f4a; }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 26px; height: 26px; border-radius: 6px;
+    background: #7ee083; border: 3px solid #14161b; margin-top: -9px; cursor: pointer;
+  }
+  input[type="range"]::-moz-range-track { height: 8px; border-radius: 4px; background: #3a3f4a; }
+  input[type="range"]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 6px; background: #7ee083; border: 3px solid #14161b; cursor: pointer; }
+
+  .divider { height: 1px; background: #3a3f4a; }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #cfd3da; }
+  .toggle-row input { accent-color: #7ee083; width: 20px; height: 20px; }
+
+  #customResBox { display: none; }
+  #customResBox.show { display: flex; }
+
+  #shootBtn {
+    background: linear-gradient(180deg, #e8a33d, #c8842a);
+    border: none;
+    color: #14161b;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+    padding: 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 0 #8f6318;
+  }
+  #shootBtn:active { transform: translateY(3px); box-shadow: 0 1px 0 #8f6318; }
+
+  #result {
+    background: #14161b;
+    border: 2px solid #3a3f4a;
+    border-radius: 12px;
+    padding: 18px 16px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #result.show { display: flex; }
+  #result .big {
+    font-family: 'Courier New', monospace;
+    font-size: 34px;
+    color: #e86b4d;
+    text-align: center;
+    line-height: 1.1;
+  }
+  #result .big small { font-size: 14px; color: #9aa1ad; display: block; margin-top: 4px; }
+  #result .breakdown { font-family: 'Courier New', monospace; font-size: 12.5px; color: #cfd3da; line-height: 2; }
+  #result .breakdown b { color: #7ee083; }
+  #result .dead { color: #e86b4d; text-align: center; font-size: 12.5px; margin-top: -4px; }
+
+  #log {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  #log .entry {
+    font-family: 'Courier New', monospace;
+    font-size: 11.5px;
+    color: #8b92a0;
+    border-left: 2px solid #3a3f4a;
+    padding-left: 8px;
+  }
+  #log .entry b { color: #e8a33d; }
+
+  #footer-note { font-size: 10.5px; color: #6b7078; line-height: 1.55; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>КАЛЬКУЛЯТОР УРОНА<span>С УЧЁТОМ ПУЛЕСТОЙКОСТИ (P_u)</span></h1>
+
+  <div class="card">
+    <div class="section-title">Оружие</div>
+    <div class="field">
+      <label>Урон оружия <b id="dmgVal">10</b></label>
+      <input type="range" id="dmgRange" min="0" max="200" step="0.5" value="10">
+      <input type="number" id="dmgNum" min="0" step="0.5" value="10" inputmode="decimal">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Броня цели (нагрудник)</div>
+    <div class="field">
+      <label>Тип брони</label>
+      <select id="armorSelect">
+        <option value="none">Без брони (0%)</option>
+        <option value="ast:sas_vest">ast:sas_vest — база 50%</option>
+        <option value="metrocraft:scout">metrocraft:scout — база 15%</option>
+        <option value="metrocraft:voi">metrocraft:voi — база 30%</option>
+        <option value="metrocraft:smorodina">metrocraft:smorodina — база 10%</option>
+        <option value="metrocraft:survival">metrocraft:survival — база 40%</option>
+        <option value="custom">Своё значение...</option>
+      </select>
+    </div>
+
+    <div class="field" id="customResBox">
+      <label>Базовая пулестойкость (%) <b id="customResVal">0</b></label>
+      <input type="number" id="customResNum" min="0" max="100" step="1" value="0">
+    </div>
+
+    <div class="field">
+      <label>Уровень заточки брони <b id="sharpVal">0</b></label>
+      <input type="range" id="sharpRange" min="0" max="30" step="1" value="0">
+      <input type="number" id="sharpNum" min="0" max="30" step="1" value="0">
+    </div>
+    <div style="font-size:11px; color:#6b7078;">Каждые 3 уровня заточки = +10% от базовой пулестойкости (как в скрипте: bonusLevels = floor(sharpen/3), bonus = base × 0.10 × bonusLevels)</div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label>Бонус от артефактов (artifact_pu_bonus) <b id="artVal">0</b></label>
+      <input type="range" id="artRange" min="-100" max="100" step="1" value="0">
+      <input type="number" id="artNum" min="-100" max="100" step="1" value="0">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Здоровье цели (для наглядности, необязательно)</div>
+    <div class="field">
+      <label>Текущее HP цели <b id="hpVal">20</b></label>
+      <input type="number" id="hpNum" min="0" step="0.5" value="20" inputmode="decimal">
+    </div>
+  </div>
+
+  <button id="shootBtn">🔫 ВЫСТРЕЛ</button>
+
+  <div id="result">
+    <div class="big" id="dmgResultBig">0<small>урона нанесено</small></div>
+    <div class="dead" id="deadLine" style="display:none;">☠ Цель повержена</div>
+    <div class="breakdown">
+      <div>Итоговая пулестойкость: <b id="brFinalRes">0</b>%</div>
+      <div>Множитель урона: <b id="brMul">1.000</b></div>
+      <div>HP цели до: <b id="brHpBefore">20</b> → после: <b id="brHpAfter">20</b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">История выстрелов</div>
+    <div id="log"><div class="entry" style="color:#4a505c;">пока пусто</div></div>
+  </div>
+
+  <div id="footer-note">
+    Логика 1:1 повторяет твой скрипт: base_resistance по типу брони → + округлённый бонус от заточки (floor(sharpen/3) × 10% от базы) → + artifact_pu_bonus → капается в диапазоне 0–100 → множитель урона = 1 − resistance/100 → итоговый урон = max(0, rawDamage × множитель).
+  </div>
+</div>
+
+<script>
+const CUSTOM_ARMOR = {
+  "ast:sas_vest": 50,
+  "metrocraft:scout": 15,
+  "metrocraft:voi": 30,
+  "metrocraft:smorodina": 10,
+  "metrocraft:survival": 40
+};
+
+const dmgRange = document.getElementById('dmgRange');
+const dmgNum = document.getElementById('dmgNum');
+const dmgVal = document.getElementById('dmgVal');
+const armorSelect = document.getElementById('armorSelect');
+const customResBox = document.getElementById('customResBox');
+const customResNum = document.getElementById('customResNum');
+const customResVal = document.getElementById('customResVal');
+const sharpRange = document.getElementById('sharpRange');
+const sharpNum = document.getElementById('sharpNum');
+const sharpVal = document.getElementById('sharpVal');
+const artRange = document.getElementById('artRange');
+const artNum = document.getElementById('artNum');
+const artVal = document.getElementById('artVal');
+const hpNum = document.getElementById('hpNum');
+const shootBtn = document.getElementById('shootBtn');
+const result = document.getElementById('result');
+const log = document.getElementById('log');
+
+function syncPair(range, num, label, formatter) {
+  range.addEventListener('input', () => { num.value = range.value; if (label) label.textContent = formatter ? formatter(range.value) : range.value; });
+  num.addEventListener('input', () => { range.value = num.value; if (label) label.textContent = formatter ? formatter(num.value) : num.value; });
+}
+syncPair(dmgRange, dmgNum, dmgVal);
+syncPair(sharpRange, sharpNum, sharpVal);
+syncPair(artRange, artNum, artVal);
+
+customResNum.addEventListener('input', () => { customResVal.textContent = customResNum.value; });
+
+armorSelect.addEventListener('change', () => {
+  customResBox.classList.toggle('show', armorSelect.value === 'custom');
+});
+
+function getBaseResistance() {
+  if (armorSelect.value === 'none') return 0;
+  if (armorSelect.value === 'custom') return parseFloat(customResNum.value) || 0;
+  return CUSTOM_ARMOR[armorSelect.value] ?? 0;
+}
+
+// Mirrors getCurrentResistance() / getDamageMultiplier() from the script
+function computeResistance() {
+  let res = getBaseResistance();
+  if (res > 0) {
+    const sharpenLevel = parseInt(sharpNum.value, 10) || 0;
+    const bonusLevels = Math.floor(sharpenLevel / 3);
+    res += Math.round(res * 0.10 * bonusLevels);
+  }
+  const artifactBonus = parseFloat(artNum.value) || 0;
+  res += artifactBonus;
+  res = Math.max(0, Math.min(100, res));
+  return Math.round(res);
+}
+
+function computeMultiplier(finalResistance) {
+  return 1 - (finalResistance / 100);
+}
+
+function timeStr() {
+  const d = new Date();
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+shootBtn.addEventListener('click', () => {
+  const rawDamage = parseFloat(dmgNum.value) || 0;
+  const finalResistance = computeResistance();
+  const mul = computeMultiplier(finalResistance);
+  const damage = Math.max(0, rawDamage * mul);
+
+  const hpBefore = parseFloat(hpNum.value) || 0;
+  const hpAfter = Math.max(0, hpBefore - damage);
+  hpNum.value = hpAfter;
+
+  document.getElementById('dmgResultBig').innerHTML = damage.toFixed(2) + '<small>урона нанесено</small>';
+  document.getElementById('brFinalRes').textContent = finalResistance;
+  document.getElementById('brMul').textContent = mul.toFixed(3);
+  document.getElementById('brHpBefore').textContent = hpBefore.toFixed(1);
+  document.getElementById('brHpAfter').textContent = hpAfter.toFixed(1);
+  document.getElementById('deadLine').style.display = hpAfter <= 0 ? 'block' : 'none';
+  result.classList.add('show');
+
+  if (log.firstChild && log.firstChild.style && log.firstChild.style.color === 'rgb(74, 80, 92)') {
+    log.innerHTML = '';
+  }
+  const entry = document.createElement('div');
+  entry.className = 'entry';
+  entry.innerHTML = `<b>${timeStr()}</b> — урон ${rawDamage} × (1 − ${finalResistance}%) = <b>${damage.toFixed(2)}</b>, HP ${hpBefore.toFixed(1)} → ${hpAfter.toFixed(1)}`;
+  log.prepend(entry);
+});
+</script>
+</body>
+</html>
