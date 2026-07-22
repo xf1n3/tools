@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -17,166 +16,165 @@
   }
   #app { position: fixed; inset: 0; }
 
-#canvas-wrap { position: absolute; inset: 0; background: #14161b; }
-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #canvas-wrap { position: absolute; inset: 0; background: #14161b; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
-#load-error {
-position: absolute; inset: 0;
-display: none;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-gap: 10px;
-padding: 30px;
-text-align: center;
-color: #cfd3da;
-font-size: 13px;
-line-height: 1.6;
-}
-#load-error.show { display: flex; }
-#load-error b { color: #e86b4d; font-size: 15px; }
+  #load-error {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 30px;
+    text-align: center;
+    color: #cfd3da;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  #load-error.show { display: flex; }
+  #load-error b { color: #e86b4d; font-size: 15px; }
 
-#hint {
-position: absolute;
-top: calc(10px + env(safe-area-inset-top));
-left: 50%;
-transform: translateX(-50%);
-font-size: 11px;
-color: #9aa1ad;
-background: rgba(20,22,27,0.7);
-padding: 6px 12px;
-border-radius: 20px;
-letter-spacing: 0.3px;
-pointer-events: none;
-white-space: nowrap;
-z-index: 5;
-}
+  #hint {
+    position: absolute;
+    top: calc(10px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #9aa1ad;
+    background: rgba(20,22,27,0.7);
+    padding: 6px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 5;
+  }
 
-#topbar {
-position: absolute;
-top: env(safe-area-inset-top);
-left: 0; right: 0;
-display: flex;
-justify-content: space-between;
-align-items: center;
-padding: 10px 14px;
-pointer-events: none;
-z-index: 5;
-}
-#topbar h1 {
-font-family: ‘Courier New’, monospace;
-font-size: 13px;
-color: #7ee083;
-text-shadow: 0 0 8px rgba(126,224,131,0.35);
-pointer-events: auto;
-background: rgba(20,22,27,0.55);
-padding: 6px 10px;
-border-radius: 6px;
-line-height: 1.4;
-}
-#topbar h1 span { display: block; color: #e8a33d; font-size: 9.5px; letter-spacing: 0.6px; }
+  #topbar {
+    position: absolute;
+    top: env(safe-area-inset-top);
+    left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    pointer-events: none;
+    z-index: 5;
+  }
+  #topbar h1 {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #7ee083;
+    text-shadow: 0 0 8px rgba(126,224,131,0.35);
+    pointer-events: auto;
+    background: rgba(20,22,27,0.55);
+    padding: 6px 10px;
+    border-radius: 6px;
+    line-height: 1.4;
+  }
+  #topbar h1 span { display: block; color: #e8a33d; font-size: 9.5px; letter-spacing: 0.6px; }
 
-/* ––––– Bottom sheet (mobile) ––––– */
-#sheet {
-position: absolute;
-left: 0; right: 0; bottom: 0;
-background: #1c1f26;
-border-top: 3px solid #3a3f4a;
-border-radius: 16px 16px 0 0;
-box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
-height: 78vh;
-display: flex;
-flex-direction: column;
-transform: translateY(calc(100% - 130px));
-transition: transform 0.25s cubic-bezier(.2,.8,.2,1);
-z-index: 20;
-touch-action: none;
-}
-#sheet.dragging { transition: none; }
-#sheet.expanded { transform: translateY(0); }
+  /* ---------- Bottom sheet (mobile) ---------- */
+  #sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: #1c1f26;
+    border-top: 3px solid #3a3f4a;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+    height: 78vh;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(calc(100% - 130px));
+    transition: transform 0.25s cubic-bezier(.2,.8,.2,1);
+    z-index: 20;
+    touch-action: none;
+  }
+  #sheet.dragging { transition: none; }
+  #sheet.expanded { transform: translateY(0); }
 
-#sheet-handle {
-display: flex;
-flex-direction: column;
-align-items: center;
-padding: 10px 0 8px;
-flex-shrink: 0;
-cursor: grab;
-}
-#sheet-handle .bar { width: 44px; height: 5px; border-radius: 3px; background: #565c68; margin-bottom: 10px; }
-#sheet-handle .label {
-font-size: 10.5px; color: #6b7078; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
-}
-#sheet-summary {
-width: 100%;
-display: flex;
-justify-content: space-around;
-padding: 0 16px 12px;
-font-family: ‘Courier New’, monospace;
-font-size: 12.5px;
-}
-#sheet-summary div { text-align: center; }
-#sheet-summary b { display: block; color: #7ee083; font-size: 16px; }
-#sheet-summary span { color: #8b92a0; font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+  #sheet-handle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0 8px;
+    flex-shrink: 0;
+    cursor: grab;
+  }
+  #sheet-handle .bar { width: 44px; height: 5px; border-radius: 3px; background: #565c68; margin-bottom: 10px; }
+  #sheet-handle .label {
+    font-size: 10.5px; color: #6b7078; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+  }
+  #sheet-summary {
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    padding: 0 16px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 12.5px;
+  }
+  #sheet-summary div { text-align: center; }
+  #sheet-summary b { display: block; color: #7ee083; font-size: 16px; }
+  #sheet-summary span { color: #8b92a0; font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
 
-#sheet-body {
-overflow-y: auto;
--webkit-overflow-scrolling: touch;
-touch-action: pan-y;
-padding: 4px 20px 30px;
-display: flex;
-flex-direction: column;
-gap: 18px;
-}
+  #sheet-body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding: 4px 20px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
 
-.field { display: flex; flex-direction: column; gap: 8px; touch-action: pan-x; }
-.field label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: #9aa1ad; display: flex; justify-content: space-between; }
-.field label b { color: #e9e6df; font-family: ‘Courier New’, monospace; }
-.field input[type=“range”] { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; background: transparent; touch-action: pan-x; }
-.field input[type=“range”]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: #3a3f4a; }
-.field input[type=“range”]::-webkit-slider-thumb {
--webkit-appearance: none; width: 28px; height: 28px; border-radius: 7px;
-background: #7ee083; border: 3px solid #14161b; margin-top: -10px; cursor: pointer;
-}
-.field input[type=“range”]::-moz-range-track { height: 8px; border-radius: 4px; background: #3a3f4a; }
-.field input[type=“range”]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 7px; background: #7ee083; border: 3px solid #14161b; cursor: pointer; }
-.field input[type=“number”] {
-background: #14161b; border: 2px solid #3a3f4a; color: #e9e6df;
-font-family: ‘Courier New’, monospace; font-size: 16px; padding: 10px 10px;
-border-radius: 8px; width: 100%;
-}
-.field input[type=“number”]:focus { outline: none; border-color: #7ee083; }
+  .field { display: flex; flex-direction: column; gap: 8px; touch-action: pan-x; }
+  .field label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: #9aa1ad; display: flex; justify-content: space-between; }
+  .field label b { color: #e9e6df; font-family: 'Courier New', monospace; }
+  .field input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; background: transparent; touch-action: pan-x; }
+  .field input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: #3a3f4a; }
+  .field input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 28px; height: 28px; border-radius: 7px;
+    background: #7ee083; border: 3px solid #14161b; margin-top: -10px; cursor: pointer;
+  }
+  .field input[type="range"]::-moz-range-track { height: 8px; border-radius: 4px; background: #3a3f4a; }
+  .field input[type="range"]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 7px; background: #7ee083; border: 3px solid #14161b; cursor: pointer; }
+  .field input[type="number"] {
+    background: #14161b; border: 2px solid #3a3f4a; color: #e9e6df;
+    font-family: 'Courier New', monospace; font-size: 16px; padding: 10px 10px;
+    border-radius: 8px; width: 100%;
+  }
+  .field input[type="number"]:focus { outline: none; border-color: #7ee083; }
 
-.divider { height: 1px; background: #3a3f4a; flex-shrink: 0; }
+  .divider { height: 1px; background: #3a3f4a; flex-shrink: 0; }
 
-.presets { display: flex; flex-wrap: wrap; gap: 8px; }
-.presets button {
-flex: 1 1 calc(50% - 8px);
-background: #262a33; border: 2px solid #3a3f4a; color: #cfd3da;
-font-size: 12px; padding: 12px 6px; border-radius: 8px; cursor: pointer; font-family: inherit;
-}
-.presets button:active { background: #333842; border-color: #7ee083; color: #7ee083; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+  .presets button {
+    flex: 1 1 calc(50% - 8px);
+    background: #262a33; border: 2px solid #3a3f4a; color: #cfd3da;
+    font-size: 12px; padding: 12px 6px; border-radius: 8px; cursor: pointer; font-family: inherit;
+  }
+  .presets button:active { background: #333842; border-color: #7ee083; color: #7ee083; }
 
-.toggle-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #cfd3da; }
-.toggle-row input { accent-color: #7ee083; width: 22px; height: 22px; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #cfd3da; }
+  .toggle-row input { accent-color: #7ee083; width: 22px; height: 22px; }
 
-#footer-note { font-size: 10.5px; color: #6b7078; line-height: 1.55; }
-.section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #6b7078; }
+  #footer-note { font-size: 10.5px; color: #6b7078; line-height: 1.55; }
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #6b7078; }
 
-@media (min-width: 860px) {
-#canvas-wrap { left: 340px; }
-#topbar { left: 340px; }
-#hint { left: calc(50% + 170px); }
-#sheet {
-left: 0; right: auto; top: 0; bottom: 0; width: 340px; height: auto;
-border-radius: 0; border-top: none; border-right: 3px solid #3a3f4a;
-transform: none; transition: none;
-}
-#sheet-handle, #sheet-summary { display: none; }
-#sheet-body { padding: 22px 20px; height: 100%; }
-}
+  @media (min-width: 860px) {
+    #canvas-wrap { left: 340px; }
+    #topbar { left: 340px; }
+    #hint { left: calc(50% + 170px); }
+    #sheet {
+      left: 0; right: auto; top: 0; bottom: 0; width: 340px; height: auto;
+      border-radius: 0; border-top: none; border-right: 3px solid #3a3f4a;
+      transform: none; transition: none;
+    }
+    #sheet-handle, #sheet-summary { display: none; }
+    #sheet-body { padding: 22px 20px; height: 100%; }
+  }
 </style>
-
 </head>
 <body>
 <div id="app">
@@ -203,60 +201,57 @@ transform: none; transition: none;
       </div>
     </div>
 
-```
-<div id="sheet-body">
-  <div class="field">
-    <label>Width / Depth (X &amp; Z) <b id="widthVal">0.60</b></label>
-    <input type="range" id="widthRange" min="0.05" max="16" step="0.01" value="0.6">
-    <input type="number" id="widthNum" min="0.05" max="64" step="0.01" value="0.6" inputmode="decimal">
-  </div>
+    <div id="sheet-body">
+      <div class="field">
+        <label>Width / Depth (X &amp; Z) <b id="widthVal">0.60</b></label>
+        <input type="range" id="widthRange" min="0.05" max="16" step="0.01" value="0.6">
+        <input type="number" id="widthNum" min="0.05" max="64" step="0.01" value="0.6" inputmode="decimal">
+      </div>
 
-  <div class="field">
-    <label>Height (Y) <b id="heightVal">1.80</b></label>
-    <input type="range" id="heightRange" min="0.05" max="16" step="0.01" value="1.8">
-    <input type="number" id="heightNum" min="0.05" max="64" step="0.01" value="1.8" inputmode="decimal">
-  </div>
+      <div class="field">
+        <label>Height (Y) <b id="heightVal">1.80</b></label>
+        <input type="range" id="heightRange" min="0.05" max="16" step="0.01" value="1.8">
+        <input type="number" id="heightNum" min="0.05" max="64" step="0.01" value="1.8" inputmode="decimal">
+      </div>
 
-  <div class="divider"></div>
+      <div class="divider"></div>
 
-  <div class="field">
-    <div class="section-title">Пресеты сущностей</div>
-    <div class="presets">
-      <button data-w="0.6" data-h="1.8">Player</button>
-      <button data-w="0.4" data-h="0.4">Chicken</button>
-      <button data-w="0.9" data-h="1.4">Wolf</button>
-      <button data-w="1.4" data-h="1.6">Cow</button>
-      <button data-w="0.6" data-h="1.95">Zombie</button>
-      <button data-w="0.6" data-h="1.99">Skeleton</button>
-      <button data-w="1.0" data-h="1.0">Slime (small)</button>
-      <button data-w="4.0" data-h="4.0">Slime (giant)</button>
-      <button data-w="1.95" data-h="2.9">Enderman</button>
-      <button data-w="16" data-h="16">Ender Dragon (bbox)</button>
-      <button data-w="1.0" data-h="2.5">Warden</button>
-      <button data-w="0.98" data-h="0.98">Iron Golem*</button>
+      <div class="field">
+        <div class="section-title">Пресеты сущностей</div>
+        <div class="presets">
+          <button data-w="0.6" data-h="1.8">Player</button>
+          <button data-w="0.4" data-h="0.4">Chicken</button>
+          <button data-w="0.9" data-h="1.4">Wolf</button>
+          <button data-w="1.4" data-h="1.6">Cow</button>
+          <button data-w="0.6" data-h="1.95">Zombie</button>
+          <button data-w="0.6" data-h="1.99">Skeleton</button>
+          <button data-w="1.0" data-h="1.0">Slime (small)</button>
+          <button data-w="4.0" data-h="4.0">Slime (giant)</button>
+          <button data-w="1.95" data-h="2.9">Enderman</button>
+          <button data-w="16" data-h="16">Ender Dragon (bbox)</button>
+          <button data-w="1.0" data-h="2.5">Warden</button>
+          <button data-w="0.98" data-h="0.98">Iron Golem*</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="toggle-row"><span>Показать игрока для сравнения</span><input type="checkbox" id="showPlayer" checked></div>
+      <div class="toggle-row"><span>Показать сетку блоков</span><input type="checkbox" id="showGrid" checked></div>
+      <div class="toggle-row"><span>Вращать автоматически</span><input type="checkbox" id="autoRotate"></div>
+
+      <div class="divider"></div>
+
+      <div id="stats" style="font-family:'Courier New',monospace; font-size:12px; line-height:1.9; color:#cfd3da;">
+        <div>Width: <b id="statW" style="color:#e8a33d">0.60</b> блоков</div>
+        <div>Height: <b id="statH" style="color:#e8a33d">1.80</b> блоков</div>
+        <div>Объём: <b id="statVol" style="color:#e8a33d">0.65</b> блока³</div>
+      </div>
+
+      <div id="footer-note">
+        Хитбокс в Bedrock — прямоугольная призма (AABB), центрированная по X/Z в точке сущности, с основанием на Y=0. Width задаёт одинаковый размер по X и Z, height — по вертикали. Серый куб — игрок (0.6×1.8) для масштаба. *Iron Golem — приблизительно.
+      </div>
     </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="toggle-row"><span>Показать игрока для сравнения</span><input type="checkbox" id="showPlayer" checked></div>
-  <div class="toggle-row"><span>Показать сетку блоков</span><input type="checkbox" id="showGrid" checked></div>
-  <div class="toggle-row"><span>Вращать автоматически</span><input type="checkbox" id="autoRotate"></div>
-
-  <div class="divider"></div>
-
-  <div id="stats" style="font-family:'Courier New',monospace; font-size:12px; line-height:1.9; color:#cfd3da;">
-    <div>Width: <b id="statW" style="color:#e8a33d">0.60</b> блоков</div>
-    <div>Height: <b id="statH" style="color:#e8a33d">1.80</b> блоков</div>
-    <div>Объём: <b id="statVol" style="color:#e8a33d">0.65</b> блока³</div>
-  </div>
-
-  <div id="footer-note">
-    Хитбокс в Bedrock — прямоугольная призма (AABB), центрированная по X/Z в точке сущности, с основанием на Y=0. Width задаёт одинаковый размер по X и Z, height — по вертикали. Серый куб — игрок (0.6×1.8) для масштаба. *Iron Golem — приблизительно.
-  </div>
-</div>
-```
-
   </div>
 </div>
 
@@ -551,6 +546,5 @@ function initScene() {
 
 boot3D();
 </script>
-
 </body>
 </html>
