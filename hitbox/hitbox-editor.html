@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Hitbox Visualizer — Minecraft Bedrock 1.21.132</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    background: #14161b;
+    color: #e9e6df;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  #app { position: fixed; inset: 0; }
+
+/* ––––– Fullscreen 3D canvas (always behind everything) ––––– */
+#canvas-wrap {
+position: absolute;
+inset: 0;
+}
+canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+#hint {
+position: absolute;
+top: calc(10px + env(safe-area-inset-top));
+left: 50%;
+transform: translateX(-50%);
+font-size: 11px;
+color: #9aa1ad;
+background: rgba(20,22,27,0.7);
+padding: 6px 12px;
+border-radius: 20px;
+letter-spacing: 0.3px;
+pointer-events: none;
+white-space: nowrap;
+}
+
+#topbar {
+position: absolute;
+top: env(safe-area-inset-top);
+left: 0; right: 0;
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 10px 14px;
+pointer-events: none;
+}
+#topbar h1 {
+font-family: ‘Courier New’, monospace;
+font-size: 13px;
+color: #7ee083;
+text-shadow: 0 0 8px rgba(126,224,131,0.35);
+pointer-events: auto;
+background: rgba(20,22,27,0.55);
+padding: 6px 10px;
+border-radius: 6px;
+line-height: 1.4;
+}
+#topbar h1 span { display: block; color: #e8a33d; font-size: 9.5px; letter-spacing: 0.6px; }
+
+/* ––––– Controls: bottom sheet on mobile, sidebar on wide screens ––––– */
+#sheet {
+position: absolute;
+left: 0; right: 0; bottom: 0;
+background: #1c1f26;
+border-top: 3px solid #3a3f4a;
+border-radius: 16px 16px 0 0;
+box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+max-height: 78vh;
+display: flex;
+flex-direction: column;
+transform: translateY(calc(100% - 118px));
+transition: transform 0.28s cubic-bezier(.2,.8,.2,1);
+z-index: 20;
+padding-bottom: env(safe-area-inset-bottom);
+}
+#sheet.expanded { transform: translateY(0); }
+
+#sheet-handle {
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 10px 0 6px;
+cursor: pointer;
+flex-shrink: 0;
+}
+#sheet-handle .bar {
+width: 42px; height: 5px; border-radius: 3px;
+background: #4a505c;
+margin-bottom: 10px;
+}
+#sheet-summary {
+width: 100%;
+display: flex;
+justify-content: space-around;
+padding: 0 16px 12px;
+font-family: ‘Courier New’, monospace;
+font-size: 12.5px;
+}
+#sheet-summary div { text-align: center; }
+#sheet-summary b { display: block; color: #7ee083; font-size: 15px; }
+#sheet-summary span { color: #8b92a0; font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+#sheet-body {
+overflow-y: auto;
+padding: 4px 20px 24px;
+display: flex;
+flex-direction: column;
+gap: 18px;
+}
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field label {
+font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px;
+color: #9aa1ad; display: flex; justify-content: space-between;
+}
+.field label b { color: #e9e6df; font-family: ‘Courier New’, monospace; }
+.field input[type=“range”] {
+-webkit-appearance: none; width: 100%; height: 28px; background: transparent;
+}
+.field input[type=“range”]::-webkit-slider-runnable-track {
+height: 8px; border-radius: 4px; background: #3a3f4a;
+}
+.field input[type=“range”]::-webkit-slider-thumb {
+-webkit-appearance: none; width: 26px; height: 26px; border-radius: 6px;
+background: #7ee083; border: 3px solid #14161b; margin-top: -9px; cursor: pointer;
+}
+.field input[type=“range”]::-moz-range-track { height: 8px; border-radius: 4px; background: #3a3f4a; }
+.field input[type=“range”]::-moz-range-thumb {
+width: 26px; height: 26px; border-radius: 6px; background: #7ee083; border: 3px solid #14161b; cursor: pointer;
+}
+.field input[type=“number”] {
+background: #14161b; border: 2px solid #3a3f4a; color: #e9e6df;
+font-family: ‘Courier New’, monospace; font-size: 15px; padding: 10px 10px;
+border-radius: 8px; width: 100%;
+}
+.field input[type=“number”]:focus { outline: none; border-color: #7ee083; }
+
+.divider { height: 1px; background: #3a3f4a; }
+
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.presets button {
+flex: 1 1 calc(50% - 8px);
+background: #262a33; border: 2px solid #3a3f4a; color: #cfd3da;
+font-size: 12px; padding: 12px 6px; border-radius: 8px; cursor: pointer;
+font-family: inherit;
+}
+.presets button:active { background: #333842; border-color: #7ee083; color: #7ee083; }
+
+.toggle-row {
+display: flex; align-items: center; justify-content: space-between;
+font-size: 13px; color: #cfd3da;
+}
+.toggle-row input { accent-color: #7ee083; width: 20px; height: 20px; }
+
+#footer-note {
+font-size: 10.5px; color: #6b7078; line-height: 1.55;
+}
+
+.section-title {
+font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #6b7078;
+}
+
+/* ––––– Desktop / wide screens: fixed sidebar instead of bottom sheet ––––– */
+@media (min-width: 860px) {
+#canvas-wrap { left: 340px; }
+#topbar { left: 340px; }
+#hint { left: calc(50% + 170px); }
+#sheet {
+left: 0; right: auto; top: 0; bottom: 0;
+width: 340px;
+max-height: none;
+border-radius: 0;
+border-top: none;
+border-right: 3px solid #3a3f4a;
+transform: none;
+transition: none;
+}
+#sheet-handle { display: none; }
+#sheet-summary { display: none; }
+#sheet-body { overflow-y: auto; padding: 22px 20px; height: 100%; }
+#app-title-desktop {
+font-family: ‘Courier New’, monospace; font-size: 15px; color: #7ee083;
+text-shadow: 0 0 8px rgba(126,224,131,0.35); line-height: 1.5;
+}
+#app-title-desktop span { display: block; color: #e8a33d; font-size: 11px; margin-top: 4px; letter-spacing: 1px; }
+}
+</style>
+
+</head>
+<body>
+<div id="app">
+  <div id="canvas-wrap">
+    <div id="hint">Один палец — вращение · щипок — зум · два пальца — панорама</div>
+  </div>
+
+  <div id="topbar">
+    <h1>HITBOX VISUALIZER<span>BEDROCK 1.21.132</span></h1>
+  </div>
+
+  <div id="sheet">
+    <div id="sheet-handle">
+      <div class="bar"></div>
+      <div id="sheet-summary">
+        <div><b id="sumW">0.60</b><span>Width</span></div>
+        <div><b id="sumH">1.80</b><span>Height</span></div>
+        <div><b id="sumEntity">Player</b><span>Похоже на</span></div>
+      </div>
+    </div>
+
+```
+<div id="sheet-body">
+  <div id="app-title-desktop" style="display:none">
+    HITBOX VISUALIZER<span>MINECRAFT BEDROCK · 1.21.132</span>
+  </div>
+
+  <div class="field">
+    <label>Width / Depth (X &amp; Z) <b id="widthVal">0.60</b></label>
+    <input type="range" id="widthRange" min="0.05" max="16" step="0.01" value="0.6">
+    <input type="number" id="widthNum" min="0.05" max="64" step="0.01" value="0.6" inputmode="decimal">
+  </div>
+
+  <div class="field">
+    <label>Height (Y) <b id="heightVal">1.80</b></label>
+    <input type="range" id="heightRange" min="0.05" max="16" step="0.01" value="1.8">
+    <input type="number" id="heightNum" min="0.05" max="64" step="0.01" value="1.8" inputmode="decimal">
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="field">
+    <div class="section-title">Пресеты сущностей</div>
+    <div class="presets">
+      <button data-w="0.6" data-h="1.8">Player</button>
+      <button data-w="0.4" data-h="0.4">Chicken</button>
+      <button data-w="0.9" data-h="1.4">Wolf</button>
+      <button data-w="1.4" data-h="1.6">Cow</button>
+      <button data-w="0.6" data-h="1.95">Zombie</button>
+      <button data-w="0.6" data-h="1.99">Skeleton</button>
+      <button data-w="1.0" data-h="1.0">Slime (small)</button>
+      <button data-w="4.0" data-h="4.0">Slime (giant)</button>
+      <button data-w="1.95" data-h="2.9">Enderman</button>
+      <button data-w="16" data-h="16">Ender Dragon (bbox)</button>
+      <button data-w="1.0" data-h="2.5">Warden</button>
+      <button data-w="0.98" data-h="0.98">Iron Golem*</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="toggle-row">
+    <span>Показать игрока для сравнения</span>
+    <input type="checkbox" id="showPlayer" checked>
+  </div>
+  <div class="toggle-row">
+    <span>Показать сетку блоков</span>
+    <input type="checkbox" id="showGrid" checked>
+  </div>
+  <div class="toggle-row">
+    <span>Вращать автоматически</span>
+    <input type="checkbox" id="autoRotate">
+  </div>
+
+  <div class="divider"></div>
+
+  <div id="stats" style="font-family:'Courier New',monospace; font-size:12px; line-height:1.9; color:#cfd3da;">
+    <div>Width: <b id="statW" style="color:#e8a33d">0.60</b> блоков</div>
+    <div>Height: <b id="statH" style="color:#e8a33d">1.80</b> блоков</div>
+    <div>Объём: <b id="statVol" style="color:#e8a33d">0.65</b> блока³</div>
+  </div>
+
+  <div id="footer-note">
+    Хитбокс в Bedrock — прямоугольная призма (AABB), центрированная по X/Z в точке сущности, с основанием на Y=0. Width задаёт одинаковый размер по X и Z, height — по вертикали. Серый куб — игрок (0.6×1.8) для масштаба, линии пола — блоки 1×1. *Iron Golem — приблизительно.
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+const wrap = document.getElementById('canvas-wrap');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14161b);
+scene.fog = new THREE.Fog(0x14161b, 25, 70);
+
+const camera = new THREE.PerspectiveCamera(55, wrap.clientWidth / wrap.clientHeight, 0.01, 1000);
+camera.position.set(4.5, 3.2, 5.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+wrap.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.screenSpacePanning = true;
+controls.update();
+
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const sun = new THREE.DirectionalLight(0xfff2d6, 0.9);
+sun.position.set(6, 10, 4);
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0x7ee0ff, 0.25);
+rim.position.set(-6, 4, -6);
+scene.add(rim);
+
+// Ground
+const groundGeo = new THREE.PlaneGeometry(80, 80);
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x22262e, roughness: 1 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+let grid = new THREE.GridHelper(80, 80, 0x3fae52, 0x2a2e35);
+grid.position.y = 0.001;
+scene.add(grid);
+
+// Origin marker
+const originGeo = new THREE.RingGeometry(0.03, 0.06, 24);
+const originMat = new THREE.MeshBasicMaterial({ color: 0xe8a33d, side: THREE.DoubleSide });
+const originMark = new THREE.Mesh(originGeo, originMat);
+originMark.rotation.x = -Math.PI / 2;
+originMark.position.y = 0.002;
+scene.add(originMark);
+
+// Hitbox group (solid fill, no depthWrite tricks that hide it)
+let hitboxMesh, hitboxEdges;
+function buildHitbox(w, h) {
+  if (hitboxMesh) { scene.remove(hitboxMesh); hitboxMesh.geometry.dispose(); }
+  if (hitboxEdges) { scene.remove(hitboxEdges); hitboxEdges.geometry.dispose(); }
+
+  const geo = new THREE.BoxGeometry(w, h, w);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x7ee083,
+    transparent: true,
+    opacity: 0.28,
+    roughness: 0.5,
+    metalness: 0.05,
+    side: THREE.DoubleSide
+  });
+  hitboxMesh = new THREE.Mesh(geo, mat);
+  hitboxMesh.position.y = h / 2;
+  scene.add(hitboxMesh);
+
+  const edgeGeo = new THREE.EdgesGeometry(geo);
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0x9dffa3 });
+  hitboxEdges = new THREE.LineSegments(edgeGeo, edgeMat);
+  hitboxEdges.position.y = h / 2;
+  scene.add(hitboxEdges);
+}
+
+// Reference player box (0.6 x 1.8 x 0.6)
+const playerGeo = new THREE.BoxGeometry(0.6, 1.8, 0.6);
+const playerMat = new THREE.MeshStandardMaterial({ color: 0x9aa1ad, transparent: true, opacity: 0.25 });
+const playerMesh = new THREE.Mesh(playerGeo, playerMat);
+playerMesh.position.set(1.6, 0.9, 0);
+scene.add(playerMesh);
+const playerEdgeGeo = new THREE.EdgesGeometry(playerGeo);
+const playerEdges = new THREE.LineSegments(playerEdgeGeo, new THREE.LineBasicMaterial({ color: 0x9aa1ad }));
+playerEdges.position.copy(playerMesh.position);
+scene.add(playerEdges);
+const headGeo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+const headMat = new THREE.MeshStandardMaterial({ color: 0xdcb98a });
+const head = new THREE.Mesh(headGeo, headMat);
+head.position.set(1.6, 1.62, 0);
+scene.add(head);
+
+const entityPresets = [
+  ["Chicken",0.4,0.4],["Wolf",0.9,1.4],["Cow / Pig / Sheep",1.4,1.6],
+  ["Player / Zombie / Skeleton",0.6,1.9],["Slime (small)",1.0,1.0],
+  ["Enderman",1.95,2.9],["Warden",1.0,2.5],["Slime (giant)",4.0,4.0],
+  ["Ender Dragon bbox",16,16]
+];
+function nearestEntity(w,h){
+  let best=null, bestD=Infinity;
+  for(const [name,ew,eh] of entityPresets){
+    const d = Math.hypot(w-ew, h-eh);
+    if(d<bestD){bestD=d;best=name;}
+  }
+  return best;
+}
+
+const widthRange = document.getElementById('widthRange');
+const widthNum = document.getElementById('widthNum');
+const heightRange = document.getElementById('heightRange');
+const heightNum = document.getElementById('heightNum');
+const widthVal = document.getElementById('widthVal');
+const heightVal = document.getElementById('heightVal');
+const statW = document.getElementById('statW');
+const statH = document.getElementById('statH');
+const statVol = document.getElementById('statVol');
+const sumW = document.getElementById('sumW');
+const sumH = document.getElementById('sumH');
+const sumEntity = document.getElementById('sumEntity');
+const showPlayer = document.getElementById('showPlayer');
+const showGrid = document.getElementById('showGrid');
+const autoRotateBox = document.getElementById('autoRotate');
+
+function update() {
+  let w = parseFloat(widthNum.value);
+  let h = parseFloat(heightNum.value);
+  if (isNaN(w) || w <= 0) w = 0.01;
+  if (isNaN(h) || h <= 0) h = 0.01;
+  w = Math.min(w, 64);
+  h = Math.min(h, 64);
+
+  widthRange.value = Math.min(w, 16);
+  heightRange.value = Math.min(h, 16);
+  widthVal.textContent = w.toFixed(2);
+  heightVal.textContent = h.toFixed(2);
+  statW.textContent = w.toFixed(2);
+  statH.textContent = h.toFixed(2);
+  statVol.textContent = (w * w * h).toFixed(3);
+  sumW.textContent = w.toFixed(2);
+  sumH.textContent = h.toFixed(2);
+  sumEntity.textContent = nearestEntity(w,h);
+
+  buildHitbox(w, h);
+  controls.target.set(0, h / 2, 0);
+
+  playerMesh.visible = showPlayer.checked;
+  playerEdges.visible = showPlayer.checked;
+  head.visible = showPlayer.checked;
+}
+
+widthRange.addEventListener('input', () => { widthNum.value = widthRange.value; update(); });
+heightRange.addEventListener('input', () => { heightNum.value = heightRange.value; update(); });
+widthNum.addEventListener('input', update);
+heightNum.addEventListener('input', update);
+
+document.querySelectorAll('.presets button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    widthNum.value = btn.dataset.w;
+    heightNum.value = btn.dataset.h;
+    update();
+  });
+});
+
+showGrid.addEventListener('change', () => { grid.visible = showGrid.checked; });
+showPlayer.addEventListener('change', update);
+
+// Bottom sheet expand/collapse (mobile)
+const sheet = document.getElementById('sheet');
+const sheetHandle = document.getElementById('sheet-handle');
+sheetHandle.addEventListener('click', () => { sheet.classList.toggle('expanded'); });
+
+function resizeRenderer() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', resizeRenderer);
+window.addEventListener('orientationchange', () => setTimeout(resizeRenderer, 250));
+
+buildHitbox(0.6, 1.8);
+update();
+resizeRenderer();
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.autoRotate = autoRotateBox.checked;
+  controls.autoRotateSpeed = 1.2;
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+
+</body>
+</html>
