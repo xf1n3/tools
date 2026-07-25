@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Bone Splitter — Bedrock Model Tool</title>
+<style>
+  :root{
+    --bg-0:#15171c;
+    --bg-1:#1b1e25;
+    --bg-2:#22262f;
+    --bg-3:#2a2f3a;
+    --line:#343a47;
+    --text-0:#e8eaee;
+    --text-1:#a6adba;
+    --text-2:#6b7280;
+    --accent:#ff9f43;
+    --accent-dim:#7a5427;
+    --bone-1:#ff6b6b;
+    --bone-2:#4ecdc4;
+    --bone-3:#a78bfa;
+    --bone-4:#ffd93d;
+    --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    height:100%;
+    background:var(--bg-0);
+    color:var(--text-0);
+    font-family:var(--sans);
+    overflow:hidden;
+    overscroll-behavior:none;
+    touch-action:none;
+  }
+  button{font-family:var(--sans);}
+  input,select{font-family:var(--sans); -webkit-appearance:none;}
+
+  #app{
+    position:fixed;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    height:100dvh;
+    width:100vw;
+  }
+
+  /* ---------- top bar ---------- */
+  #topbar{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:calc(8px + var(--safe-top)) 10px 8px 10px;
+    background:var(--bg-1);
+    border-bottom:1px solid var(--line);
+    z-index:20;
+  }
+  #topbar .brand{
+    font-weight:700;
+    font-size:12.5px;
+    letter-spacing:0.02em;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:var(--text-0);
+    flex-shrink:0;
+  }
+  #topbar .brand .dot{
+    width:7px;height:7px;border-radius:2px;
+    background:var(--accent);
+    transform:rotate(45deg);
+    flex-shrink:0;
+  }
+  .icon-btn{
+    background:var(--bg-2);
+    border:1px solid var(--line);
+    color:var(--text-0);
+    width:36px;height:36px;
+    border-radius:8px;
+    font-size:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .icon-btn:active{background:var(--bg-3);}
+  .icon-btn.primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#1a1300;
+  }
+  #topbar .filename{
+    color:var(--text-2);
+    font-size:10.5px;
+    font-family:var(--mono);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    flex:1;
+    min-width:0;
+  }
+
+  /* ---------- viewport (full screen behind sheets) ---------- */
+  #viewport-wrap{
+    position:relative;
+    flex:1;
+    min-height:0;
+    background:
+      radial-gradient(circle at 50% 40%, #23262f 0%, #17191f 70%);
+    overflow:hidden;
+    touch-action:none;
+  }
+  #viewport-wrap canvas{display:block; touch-action:none;}
+
+  #drop-hint{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:12px;
+    pointer-events:none;
+    color:var(--text-2);
+    padding:0 30px;
+    text-align:center;
+  }
+  #drop-hint.hidden{display:none;}
+  #drop-hint .icon{
+    width:48px;height:48px;
+    border:2px dashed var(--line);
+    border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;
+  }
+  #drop-hint .txt{font-size:12.5px; line-height:1.5;}
+  #drop-hint .txt b{color:var(--text-1);}
+
+  #viewport-toolbar{
+    position:absolute;
+    top:10px; left:10px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    z-index:5;
+  }
+  #gizmo-toolbar{
+    position:absolute;
+    top:10px; right:10px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    z-index:5;
+  }
+  .vbtn{
+    width:38px;height:38px;
+    background:rgba(27,30,37,0.9);
+    backdrop-filter:blur(6px);
+    border:1px solid var(--line);
+    border-radius:9px;
+    color:var(--text-1);
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;
+  }
+  .vbtn:active{color:var(--text-0);}
+  .vbtn.active{color:var(--accent); border-color:var(--accent-dim); background:rgba(122,84,39,0.3);}
+
+  #status-toast{
+    position:absolute;
+    top:10px; left:50%;
+    transform:translateX(-50%);
+    background:rgba(27,30,37,0.95);
+    backdrop-filter:blur(6px);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:7px 12px;
+    font-size:11px;
+    font-family:var(--mono);
+    color:var(--text-1);
+    z-index:6;
+    max-width:78vw;
+    text-align:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s;
+  }
+  #status-toast.show{opacity:1;}
+  #status-toast.error{color:#ff8787; border-color:#5c2d2d;}
+
+  /* selected-bone quick readout above the bottom bar */
+  #quick-readout{
+    position:absolute;
+    left:10px; right:10px; bottom:10px;
+    background:rgba(27,30,37,0.92);
+    backdrop-filter:blur(6px);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 10px;
+    z-index:5;
+    display:none;
+  }
+  #quick-readout.show{display:block;}
+  #quick-readout .qr-head{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    margin-bottom:6px;
+  }
+  #quick-readout .qr-swatch{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+  #quick-readout .qr-name{font-size:11.5px; font-weight:600; flex:1;}
+  #quick-readout .qr-count{font-size:10px; color:var(--text-2); font-family:var(--mono);}
+  #quick-readout .qr-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:5px;
+  }
+  #quick-readout .qr-num{
+    background:var(--bg-1);
+    border:1px solid var(--line);
+    color:var(--text-0);
+    font-family:var(--mono);
+    font-size:11px;
+    padding:6px 2px;
+    border-radius:6px;
+    width:100%;
+    text-align:center;
+  }
+
+  /* ---------- bottom tab bar ---------- */
+  #tabbar{
+    flex-shrink:0;
+    display:flex;
+    background:var(--bg-1);
+    border-top:1px solid var(--line);
+    padding-bottom:var(--safe-bottom);
+    z-index:20;
+  }
+  .tab-btn{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    padding:9px 0 8px 0;
+    color:var(--text-2);
+    background:none;
+    border:none;
+    font-size:9.5px;
+    letter-spacing:0.02em;
+  }
+  .tab-btn .tab-icon{font-size:17px;}
+  .tab-btn.active{color:var(--accent);}
+
+  /* ---------- bottom sheet ---------- */
+  #sheet-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    z-index:29;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s;
+  }
+  #sheet-backdrop.show{opacity:1; pointer-events:auto;}
+
+  #sheet{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    max-height:72dvh;
+    background:var(--bg-1);
+    border-top:1px solid var(--line);
+    border-radius:16px 16px 0 0;
+    z-index:30;
+    transform:translateY(100%);
+    transition:transform .22s cubic-bezier(.32,.72,0,1);
+    display:flex;
+    flex-direction:column;
+    padding-bottom:var(--safe-bottom);
+  }
+  #sheet.open{transform:translateY(0);}
+  #sheet-handle{
+    display:flex;
+    justify-content:center;
+    padding:9px 0 4px 0;
+    flex-shrink:0;
+  }
+  #sheet-handle .bar{
+    width:36px; height:4px; border-radius:2px;
+    background:var(--line);
+  }
+  #sheet-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:2px 16px 10px 16px;
+    flex-shrink:0;
+    border-bottom:1px solid var(--line);
+  }
+  #sheet-header .title{font-size:14px; font-weight:700;}
+  #sheet-header .close-btn{
+    color:var(--text-2);
+    font-size:20px;
+    width:28px;height:28px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #sheet-body{
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:12px 14px;
+  }
+
+  .panel-title{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text-2);
+    margin-bottom:9px;
+    padding:0 2px;
+  }
+
+  /* bone cards (reused in sheet) */
+  .bone-card{
+    background:var(--bg-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    margin-bottom:10px;
+  }
+  .bone-card.selected{border-color:var(--accent-dim);}
+  .bone-card.disabled{opacity:.45;}
+  .bone-head{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin-bottom:10px;
+  }
+  .bone-swatch{
+    width:13px;height:13px;border-radius:4px;flex-shrink:0;
+  }
+  .bone-name-input{
+    background:transparent;
+    border:none;
+    color:var(--text-0);
+    font-weight:600;
+    font-size:14px;
+    flex:1;
+    min-width:0;
+    outline:none;
+    border-bottom:1px solid transparent;
+    padding:4px 0;
+  }
+  .bone-name-input:focus{border-bottom:1px solid var(--accent);}
+  .bone-toggle{
+    width:42px;height:24px;
+    background:var(--bg-3);
+    border-radius:12px;
+    position:relative;
+    flex-shrink:0;
+    border:1px solid var(--line);
+  }
+  .bone-toggle.on{background:var(--accent-dim);}
+  .bone-toggle::after{
+    content:'';
+    position:absolute;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--text-1);
+    top:2px; left:2px;
+    transition:transform .15s, background .15s;
+  }
+  .bone-toggle.on::after{
+    transform:translateX(18px);
+    background:var(--accent);
+  }
+  .bone-select-btn{
+    background:var(--bg-1);
+    border:1px solid var(--line);
+    color:var(--text-1);
+    font-size:11px;
+    padding:5px 10px;
+    border-radius:7px;
+    flex-shrink:0;
+  }
+  .bone-select-btn.active{color:var(--accent); border-color:var(--accent-dim);}
+
+  .bone-grid{
+    display:grid;
+    grid-template-columns: 30px 1fr 1fr 1fr;
+    gap:5px 6px;
+    align-items:center;
+  }
+  .bone-grid .axis-label{
+    font-family:var(--mono);
+    font-size:10px;
+    color:var(--text-2);
+    text-align:center;
+  }
+  .bone-grid .row-label{
+    font-size:10px;
+    color:var(--text-2);
+    grid-column:1;
+  }
+  .bone-num{
+    background:var(--bg-1);
+    border:1px solid var(--line);
+    color:var(--text-0);
+    font-family:var(--mono);
+    font-size:13px;
+    padding:8px 4px;
+    border-radius:6px;
+    width:100%;
+    outline:none;
+    text-align:center;
+  }
+  .bone-num:focus{border-color:var(--accent);}
+  .bone-section-label{
+    font-size:9.5px;
+    color:var(--text-2);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin:9px 0 5px 0;
+  }
+  .bone-stat{
+    margin-top:9px;
+    font-size:11.5px;
+    color:var(--text-1);
+    font-family:var(--mono);
+    display:flex;
+    justify-content:space-between;
+    padding-top:9px;
+    border-top:1px solid var(--line);
+  }
+  .hint-block{
+    font-size:12px;
+    line-height:1.55;
+    color:var(--text-2);
+    padding:4px 2px 10px 2px;
+  }
+
+  /* mesh list (sheet) */
+  .mesh-row{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:11px 11px;
+    background:var(--bg-2);
+    border:1px solid var(--line);
+    border-radius:9px;
+    margin-bottom:8px;
+    font-size:13px;
+  }
+  .mesh-row .swatch{
+    width:11px;height:11px;border-radius:3px;flex-shrink:0;
+  }
+  .mesh-row .mname{flex:1; color:var(--text-0); font-weight:500;}
+  .mesh-row .mcount{color:var(--text-2); font-family:var(--mono); font-size:11px;}
+
+  /* file sheet */
+  .file-action-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:13px 12px;
+    background:var(--bg-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    margin-bottom:10px;
+    font-size:13.5px;
+    font-weight:600;
+  }
+  .file-action-row .fa-icon{font-size:17px; width:22px; text-align:center;}
+  .opt-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:9px 2px;
+    font-size:13px;
+    color:var(--text-1);
+  }
+  .opt-row select{
+    background:var(--bg-2);
+    border:1px solid var(--line);
+    color:var(--text-0);
+    font-size:12.5px;
+    padding:7px 8px;
+    border-radius:7px;
+  }
+
+  input[type=file]{display:none;}
+
+  ::-webkit-scrollbar{width:0; height:0;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="topbar">
+    <div class="brand"><span class="dot"></span>BONE SPLITTER</div>
+    <div class="filename" id="filename">файл не загружен</div>
+    <button class="icon-btn" id="btn-open" title="Открыть .json">📁</button>
+  </div>
+
+  <div id="viewport-wrap">
+    <div id="drop-hint">
+      <div class="icon">⬒</div>
+      <div class="txt">Нажмите 📁 вверху, чтобы загрузить <b>.json</b> модель Bedrock (с вшитым мешем)</div>
+    </div>
+
+    <div id="status-toast"></div>
+
+    <div id="viewport-toolbar">
+      <div class="vbtn active" id="vbtn-solid" title="Solid">◼</div>
+      <div class="vbtn" id="vbtn-wire" title="Wireframe">▦</div>
+      <div class="vbtn" id="vbtn-grid" title="Сетка">#</div>
+    </div>
+
+    <div id="gizmo-toolbar">
+      <div class="vbtn active" id="vbtn-move" title="Перемещение">✥</div>
+      <div class="vbtn" id="vbtn-scale" title="Масштаб">⤢</div>
+    </div>
+
+    <div id="quick-readout">
+      <div class="qr-head">
+        <div class="qr-swatch" id="qr-swatch"></div>
+        <div class="qr-name" id="qr-name">bone_1</div>
+        <div class="qr-count" id="qr-count">0 tri</div>
+      </div>
+      <div class="qr-grid">
+        <input class="qr-num" id="qr-x" type="number" step="0.05">
+        <input class="qr-num" id="qr-y" type="number" step="0.05">
+        <input class="qr-num" id="qr-z" type="number" step="0.05">
+      </div>
+    </div>
+  </div>
+
+  <div id="tabbar">
+    <button class="tab-btn" data-sheet="bones">
+      <span class="tab-icon">◈</span>
+      <span>Кости</span>
+    </button>
+    <button class="tab-btn" data-sheet="meshes">
+      <span class="tab-icon">▤</span>
+      <span>Меши</span>
+    </button>
+    <button class="tab-btn" data-sheet="file">
+      <span class="tab-icon">⬇</span>
+      <span>Файл</span>
+    </button>
+  </div>
+
+</div>
+
+<div id="sheet-backdrop"></div>
+<div id="sheet">
+  <div id="sheet-handle"><div class="bar"></div></div>
+  <div id="sheet-header">
+    <div class="title" id="sheet-title">Кости</div>
+    <div class="close-btn" id="sheet-close">✕</div>
+  </div>
+  <div id="sheet-body"></div>
+</div>
+
+<input type="file" id="file-input" accept=".json">
+
+<!-- Templates for sheet content -->
+<template id="tpl-bones-sheet">
+  <div class="panel-title">Кости отсечения (4)</div>
+  <div id="bones-list"></div>
+  <div class="hint-block">
+    Каждая кость — куб-зона. Всё, что находится <b>внутри</b> куба, при экспорте уходит в отдельный меш кости. Остальное остаётся в <b>main</b>.
+    <br><br>
+    Выберите кость кнопкой «выбрать», затем двигайте её пальцем в 3D через гизмо (иконки ✥ / ⤢ вверху справа), или меняйте числа ниже.
+  </div>
+</template>
+
+<template id="tpl-meshes-sheet">
+  <div class="panel-title">Результирующие меши</div>
+  <div id="mesh-list"></div>
+</template>
+
+<template id="tpl-file-sheet">
+  <div class="panel-title">Файл</div>
+  <div class="file-action-row" id="fa-open">
+    <span class="fa-icon">📁</span><span>Открыть .json модель</span>
+  </div>
+  <div class="panel-title" style="margin-top:16px;">Экспорт</div>
+  <div class="opt-row">
+    <span>Формат</span>
+    <select id="export-format">
+      <option value="zip">ZIP (несколько .obj)</option>
+      <option value="single">Один .obj (группы g)</option>
+    </select>
+  </div>
+  <div class="file-action-row" id="fa-export" style="margin-top:8px; background:var(--accent); border-color:var(--accent); color:#1a1300;">
+    <span class="fa-icon">⬇</span><span id="fa-export-label">Скачать</span>
+  </div>
+  <div class="hint-block" id="file-info-block"></div>
+</template>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
